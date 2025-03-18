@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState, useEffect, useCallback } from "react"
 import { Search } from "lucide-react"
 import { Input } from "@/components/ui/input"
@@ -22,6 +21,15 @@ interface User {
     bs: string
   }
 }
+
+const debounce = <T extends (...args: any[]) => void>(func: T, delay: number): ((...args: Parameters<T>) => void) => {
+  let timeoutId: NodeJS.Timeout;
+  return (...args: Parameters<T>) => {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => func(...args), delay);
+  };
+};
+
 
 export default function UserSearch() {
   const [users, setUsers] = useState<User[]>([])
@@ -55,43 +63,25 @@ export default function UserSearch() {
     fetchUsers()
   }, [])
 
-  // Implement debounced search
-  const debounce = (func: Function, delay: number) => {
-    let timeoutId: NodeJS.Timeout
-    return (...args: any[]) => {
-      clearTimeout(timeoutId)
-      timeoutId = setTimeout(() => func(...args), delay)
+  // Filter users based on search term
+  const filterUsers = (term: string) => {
+    if (!term.trim()) {
+      setFilteredUsers(users)
+      return
     }
+
+    const lowerCaseTerm = term.toLowerCase()
+    const filtered = users.filter(
+      (user) =>
+        user.name.toLowerCase().includes(lowerCaseTerm) ||
+        user.username.toLowerCase().includes(lowerCaseTerm) ||
+        user.email.toLowerCase().includes(lowerCaseTerm),
+    )
+
+    setFilteredUsers(filtered)
   }
 
-  // Filter users based on search term
-  const filterUsers = useCallback(
-    (term: string) => {
-      if (!term.trim()) {
-        setFilteredUsers(users)
-        return
-      }
-
-      const lowerCaseTerm = term.toLowerCase()
-
-      // Using a HashMap approach for efficient filtering
-      const filtered = users.filter(
-        (user) =>
-          user.name.toLowerCase().includes(lowerCaseTerm) ||
-          user.username.toLowerCase().includes(lowerCaseTerm) ||
-          user.email.toLowerCase().includes(lowerCaseTerm),
-      )
-
-      setFilteredUsers(filtered)
-    },
-    [users],
-  )
-
-  // Create debounced version of filterUsers
-  const debouncedFilterUsers = useCallback(
-    debounce((term: string) => filterUsers(term), 300),
-    [filterUsers],
-  )
+  const debouncedFilterUsers = useCallback(debounce(filterUsers, 300), [filterUsers]);
 
   // Handle search input change
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -191,4 +181,3 @@ export default function UserSearch() {
     </section>
   )
 }
-
